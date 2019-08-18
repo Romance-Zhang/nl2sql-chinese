@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ***** New June 28st, 2019 *****
 
 Fix the execution accuracy calculation, covering all correct cases, for example
@@ -105,3 +106,6 @@ https://github.com/salesforce/WikiSQL
 https://yale-lily.github.io/spider
 
 <a href="https://arxiv.org/pdf/1804.08338.pdf">Semantic Parsing with Syntax- and Table-Aware SQL Generation</a>
+=======
+# nl2sql-
+>>>>>>> 1684b860999cb8798e873b23504bcf15664900ae
