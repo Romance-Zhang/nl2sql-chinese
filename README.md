@@ -1,31 +1,4 @@
 <<<<<<< HEAD
-***** New June 28st, 2019 *****
-
-Fix the execution accuracy calculation, covering all correct cases, for example
-
-```
-SELECT COL_1, COL_2 ...
-SELECT COL_2, COL_1 ...
-```
-
-Another example is
-
-```
-SELECT COL_1 ... WHERE COL_2 == 1 OR COL_3 == 1
-SELECT COL_1 ... WHERE COL_3 == 1 OR COL_2 == 1
-```
-
-Now we assume these SQL pairs have the same execution result.
-
-***** New June 21st, 2019 *****
-
-This branch aims to support Python3, which is developed under Python3.5 and PyTorch1.0.
-
-ATTENTION: To use this version of code, please download nl2sql_char_embedding_py3.zip to use, instead of nl2sql_char_embedding_baseline.zip.  
-
-***** New June 18st, 2019 *****
-
-This version of release supports execution accuracy, which gets the execution result of predicted SQL. This requires records==0.5.3 before running.
 
 ## Introduction
 
@@ -41,7 +14,7 @@ The difference between SQLNet and this baseline model is, Select-Number and Wher
 
 ## Dependencies
 
- - Python 2.7
+ - Python 3.5
  - torch 1.0.1
  - records 0.5.3
  - tqdm
