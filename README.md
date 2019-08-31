@@ -1,4 +1,4 @@
-## Introduction
+﻿## Introduction
 这个项目是追一科技的nl2sql比赛项目，任务是输入一个自然语言问句，输出一个相对应的mysql语句。
 ### 整个任务分为八个子任务：
 #### 1.SELECT NUM
@@ -55,8 +55,7 @@ data目录下是数据文件，结构如下图所示：
 
 ### 第二部分
 对best_val中的结果做第二步处理，基于规则预测WHERE COLUMN和WHERE VALUE，并对WHERE OP和WHERE RELATION做相应修正
-启动命令：python code/rule_base_val.py 
-会写入中间文件lalala_val.json以及生成最终的预测结果文件pre_val.json
+启动命令：python code/rule_base_val.py 生成最终的预测结果文件pre_val.json
 
 ### 第三部分
 得出验证集上的准确率预测结果

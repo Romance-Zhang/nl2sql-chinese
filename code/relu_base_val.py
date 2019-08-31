@@ -8,6 +8,7 @@ import copy
 
 def get_date(question):
     a = re.findall('\d+年+\d+月+\d+[日/号]',question)
+    #######把问句中的年月日替换为-连接的字符串，方便与数据库中数据匹配
     if a:
         tem = re.sub('年','-',a[0])
         tem = re.sub('月','-',tem)
@@ -17,11 +18,11 @@ def get_date(question):
         if a:
             tem = re.sub('年','-',a[0])
             question = re.sub(a[0],tem,question)
+    ###顺便替换‘两’
     question = re.sub('两','二',question)
             
     return question
             
-
 def is_number(s):
     try:
         float(s)
@@ -46,156 +47,6 @@ def is_alabo_number(s):
         pass
     return False
 
-def find_lcseque(s1, s2):   
-     # 生成字符串长度加1的0矩阵，m用来保存对应位置匹配的结果  
-    m = [ [ 0 for x in range(len(s2)+1) ] for y in range(len(s1)+1) ]   
-    # d用来记录转移方向  
-    d = [ [ None for x in range(len(s2)+1) ] for y in range(len(s1)+1) ]   
-
-    for p1 in range(len(s1)):   
-        for p2 in range(len(s2)):   
-            if s1[p1] == s2[p2]:            #字符匹配成功，则该位置的值为左上方的值加1  
-                m[p1+1][p2+1] = m[p1][p2]+1  
-                d[p1+1][p2+1] = 'ok'            
-            elif m[p1+1][p2] > m[p1][p2+1]:  #左值大于上值，则该位置的值为左值，并标记回溯时的方向  
-                m[p1+1][p2+1] = m[p1+1][p2]   
-                d[p1+1][p2+1] = 'left'            
-            else:                           #上值大于左值，则该位置的值为上值，并标记方向up  
-                m[p1+1][p2+1] = m[p1][p2+1]     
-                d[p1+1][p2+1] = 'up'           
-    (p1, p2) = (len(s1), len(s2))   
-    s = []   
-    while m[p1][p2]:    #不为None时  
-        c = d[p1][p2]  
-        if c == 'ok':   #匹配成功，插入该字符，并向左上角找下一个  
-            s.append(s1[p1-1])  
-            p1-=1  
-            p2-=1   
-        if c =='left':  #根据标记，向左找下一个  
-            p2 -= 1  
-        if c == 'up':   #根据标记，向上找下一个  
-            p1 -= 1  
-    s.reverse()   
-    out = ''.join(s)
-    return out,len(out)
-
-def match_chinese_value(rows,question):
-    rank1 = 0
-    rank2 = 0
-    rank1_str = ''
-    rank2_str = ''
-    header1 = 0
-    header2 = 0
-    for i in range(0,len(rows)):
-        for j in range(0,len(rows[0])):
-            rows[i][j] = str(rows[i][j])
-            if rows[i][j] == rank1_str or rows[i][j] == rank2_str: 
-                continue
-            _,num1 = find_lcseque(question,rows[i][j])
-            num = num1/len(rows[i][j])
-            if len(rows[i][j]) == 1:
-                num = num - 0.4
-            if len(rows[i][j]) == 2:
-                num = num - 0.15
-            if len(rows[i][j]) == 3:
-                num = num - 0.12
-            if len(rows[i][j]) == 4:
-                num = num - 0.1
-                
-            if num > rank1:                   ####比例最大的优先
-                rank2 = rank1
-                rank2_str = rank1_str
-                header2 = header1
-                rank1 = num
-                rank1_str = rows[i][j]
-                header1 = j
-            elif num == rank1:  
-                if len(rows[i][j]) > len(rank1_str):    ########比例相同的字符长的优先
-                    rank2 = rank1
-                    rank2_str = rank1_str
-                    header2 = header1
-                    rank1 = num
-                    rank1_str = rows[i][j]
-                    header1 = j
-                else:
-                    if num > rank2:
-                        rank2 = num
-                        rank2_str = rows[i][j]
-                        header2 = j
-                    else:   ########### num == rank2
-                        if len(rows[i][j]) > len(rank2_str):
-                            rank2 = num
-                            rank2_str = rows[i][j]
-                            header2 = j
-                            
-                                
-            elif num > rank2:
-                rank2 = num
-                rank2_str = rows[i][j]
-                header2 = j
-            
-            elif num == rank2:                ########比例相同的不重复优先 
-                if rank2_str in rank1_str:
-                    if rows[i][j] not in rank1_str :
-                        rank2 = num
-                        rank2_str = rows[i][j]
-                        header2 = j
-                    else:
-                        if len(rows[i][j]) > len(rank2_str):
-                            rank2 = num
-                            rank2_str = rows[i][j]
-                            header2 = j
-                else:
-                    if rows[i][j] not in rank1_str :
-                        if len(rows[i][j]) > len(rank2_str):
-                            rank2 = num
-                            rank2_str = rows[i][j]
-                            header2 = j
-    
-    return rank1_str,rank2_str,header1,header2
-
-def num_column(word,question,headers):
-    st = question.index(word)- 12 if question.index(word)- 12 > 0 else 0
-    ed = question.index(word)
-    question = question[st:ed]
-    rows = [headers]
-    rank1_str,rank2_str,header1,header2 = match_chinese_value(rows,question)
-                        
-    return header1,header2
-
-
-def getNumofCommonSubstr(str1, str2):
-  
-    lstr1 = len(str1)
-    lstr2 = len(str2)
-    record = [[0 for i in range(lstr2+1)] for j in range(lstr1+1)] # 多一位
-    maxNum = 0   # 最长匹配长度
-    p = 0    # 匹配的起始位
-  
-    for i in range(lstr1):
-        for j in range(lstr2):
-            if str1[i] == str2[j]:
-                # 相同则累加
-                record[i+1][j+1] = record[i][j] + 1
-                if record[i+1][j+1] > maxNum:
-                    # 获取最大匹配长度
-                    maxNum = record[i+1][j+1]
-                    # 记录最大匹配长度的终止位置
-                    p = i + 1
-    return str1[p-maxNum:p], maxNum
-
-def get_headers(table_id):
-    f = 'data/val/val.tables.json'   
-    with open(f, encoding='utf-8') as inf:
-        for idx, line in enumerate(inf):
-            sql = json.loads(line.strip())
-            my_id = sql['id']
-            if my_id == table_id:
-                headers = sql['header']
-                inf.close()
-                return headers
-            
-            
 #选出所有问句中的数字来
 def chinese_to_num(word):    
     #####1.拿到包含汉字数字的连续字符串
@@ -281,8 +132,136 @@ def chinese_to_num(word):
     ######################3.字符串中进行替换   
     if chi_str in word:
         word = re.sub(chi_str,number,word)
-    return word                 
+    return word    
 
+def find_lcseque(s1, s2):   
+     # 生成字符串长度加1的0矩阵，m用来保存对应位置匹配的结果  
+    m = [ [ 0 for x in range(len(s2)+1) ] for y in range(len(s1)+1) ]   
+    # d用来记录转移方向  
+    d = [ [ None for x in range(len(s2)+1) ] for y in range(len(s1)+1) ]   
+
+    for p1 in range(len(s1)):   
+        for p2 in range(len(s2)):   
+            if s1[p1] == s2[p2]:            #字符匹配成功，则该位置的值为左上方的值加1  
+                m[p1+1][p2+1] = m[p1][p2]+1  
+                d[p1+1][p2+1] = 'ok'            
+            elif m[p1+1][p2] > m[p1][p2+1]:  #左值大于上值，则该位置的值为左值，并标记回溯时的方向  
+                m[p1+1][p2+1] = m[p1+1][p2]   
+                d[p1+1][p2+1] = 'left'            
+            else:                           #上值大于左值，则该位置的值为上值，并标记方向up  
+                m[p1+1][p2+1] = m[p1][p2+1]     
+                d[p1+1][p2+1] = 'up'           
+    (p1, p2) = (len(s1), len(s2))   
+    s = []   
+    while m[p1][p2]:    #不为None时  
+        c = d[p1][p2]  
+        if c == 'ok':   #匹配成功，插入该字符，并向左上角找下一个  
+            s.append(s1[p1-1])  
+            p1-=1  
+            p2-=1   
+        if c =='left':  #根据标记，向左找下一个  
+            p2 -= 1  
+        if c == 'up':   #根据标记，向上找下一个  
+            p1 -= 1  
+    s.reverse()   
+    out = ''.join(s)
+    return out,len(out)
+
+def getNumofCommonSubstr(str1, str2):
+  
+    lstr1 = len(str1)
+    lstr2 = len(str2)
+    record = [[0 for i in range(lstr2+1)] for j in range(lstr1+1)] # 多一位
+    maxNum = 0   # 最长匹配长度
+    p = 0    # 匹配的起始位
+  
+    for i in range(lstr1):
+        for j in range(lstr2):
+            if str1[i] == str2[j]:
+                # 相同则累加
+                record[i+1][j+1] = record[i][j] + 1
+                if record[i+1][j+1] > maxNum:
+                    # 获取最大匹配长度
+                    maxNum = record[i+1][j+1]
+                    # 记录最大匹配长度的终止位置
+                    p = i + 1
+    return str1[p-maxNum:p], maxNum
+
+def match_chinese_value(rows,question):
+    ########################匹配进行字符串的选择策略是：
+    ##############对rank1_str 1.比例最大的优先  2.比例相同的字符长的优先  
+    ##############对rank2_str 1.比例最大的优先  2.比例相同的不重复优先（不在rank1_str中）  3.比例相同的
+    rank1 ,rank2 ,header1 ,header2= 0 ,0 ,0 ,0
+    rank1_str ,rank2_str = '' ,''
+
+    for i in range(0,len(rows)):
+        for j in range(0,len(rows[0])):
+            rows[i][j] = str(rows[i][j])
+            if rows[i][j] == rank1_str or rows[i][j] == rank2_str: 
+                continue
+            _,num1 = find_lcseque(question,rows[i][j])
+            num = num1/len(rows[i][j])
+            ###########做一个长度的优化，长度较短的减少一定的数值
+            if len(rows[i][j]) == 1:
+                num = num - 0.4
+            if len(rows[i][j]) == 2:
+                num = num - 0.15
+            if len(rows[i][j]) == 3:
+                num = num - 0.12
+            if len(rows[i][j]) == 4:
+                num = num - 0.1
+                
+            if num > rank1:                   ####比例最大的优先
+                rank2,rank2_str,header2 = rank1,rank1_str,header1     
+                rank1,rank1_str,header1 = num,rows[i][j],j
+            elif num == rank1:  
+                if len(rows[i][j]) > len(rank1_str):    ########比例相同的字符长的优先
+                    rank2,rank2_str,header2 = rank1,rank1_str,header1  
+                    rank1,rank1_str,header1 = num,rows[i][j],j
+                else:
+                    if num > rank2:
+                        rank2,rank2_str,header2 = num,rows[i][j],j
+                    else:   ########### num == rank2
+                        if len(rows[i][j]) > len(rank2_str):
+                            rank2,rank2_str,header2 = num,rows[i][j],j
+                                                            
+            elif num > rank2:
+                rank2,rank2_str,header2 = num,rows[i][j],j
+            
+            elif num == rank2:                ########比例相同的不重复优先 
+                if rank2_str in rank1_str:
+                    if rows[i][j] not in rank1_str :
+                        rank2,rank2_str,header2 = num,rows[i][j],j
+                    else:
+                        if len(rows[i][j]) > len(rank2_str):
+                            rank2,rank2_str,header2 = num,rows[i][j],j
+                else:
+                    if rows[i][j] not in rank1_str :
+                        if len(rows[i][j]) > len(rank2_str):
+                            rank2,rank2_str,header2 = num,rows[i][j],j
+    
+    return rank1_str,rank2_str,header1,header2
+
+def num_column(word,question,headers):
+    st = question.index(word)- 12 if question.index(word)- 12 > 0 else 0
+    ed = question.index(word)
+    question = question[st:ed]
+    rows = [headers]
+    _,_,header1,header2 = match_chinese_value(rows,question)
+    #############把question和数据表中rows中的数值进行比对得到匹配度最高的header1和header2
+    return header1,header2
+
+def get_headers(table_id):
+    f = 'data/val/val.tables.json'   
+    with open(f, encoding='utf-8') as inf:
+        for idx, line in enumerate(inf):
+            sql = json.loads(line.strip())
+            my_id = sql['id']
+            if my_id == table_id:
+                headers = sql['header']
+                inf.close()
+                return headers
+                   
 def get_number(re_list):
     new_list = []
     for word_piece in re_list:
@@ -325,44 +304,24 @@ def get_piece(word,question,headers):
     header1_list = []
     header2_list = []
     if word in question:
-        if word == '超':
-            if question[question.index(word)-1]!='不' and question[question.index(word)-1]!='未'and question[question.index(word) - 2:question.index(word)]!='没有' and question[question.index(word)-1]!='没' and question[question.index(word)+1]!='出' and question[question.index(word)+1]!='过':
-                st = question.index(word)+len(word)
-                ed = st+8 if st+8<len(question) else len(question)
-                re_sub_piece = question[st:ed]
+#############用之前的字符判断列#############
+        if question[question.index(word)-1]!='不' and question[question.index(word)-1]!='未'and question[question.index(word) - 2:question.index(word)]!='没有' and question[question.index(word)-1]!='没':
+            st = question.index(word)+len(word)
+            ed = st+8 if st+8<len(question) else len(question)
+            re_sub_piece = question[st:ed]
+            re_list.append(re_sub_piece)
+            header1,header2 = num_column(word,question,headers)
+            header1_list.append(header1)
+            header2_list.append(header2)
+            if question[question.index(word) - 1] == '都' or question[question.index(word) - 2:question.index(word)] == '都是' or question[question.index(word) - 2:question.index(word)] == '都会':
                 re_list.append(re_sub_piece)
-                header1,header2 = num_column(word,question,headers)
-                header1_list.append(header1)
-                header2_list.append(header2)
-                if question[question.index(word) - 1] == '都' or question[question.index(word) - 2:question.index(word)] == '都是' or question[question.index(word) - 2:question.index(word)] == '都会':
-                    re_list.append(re_sub_piece)
-                if word in question[st:]:
-                    a,b,c = get_piece(word,question[st:],headers)
-                    if len(a)>0:
-                        re_list.append(a[0]) 
-                        header1,header2 = num_column(word,question[st:],headers)
-                        header1_list.append(header1)
-                        header2_list.append(header2)
-                #############用之前的字符判断列#############
-
-        else:
-            if question[question.index(word)-1]!='不' and question[question.index(word)-1]!='未'and question[question.index(word) - 2:question.index(word)]!='没有' and question[question.index(word)-1]!='没':
-                st = question.index(word)+len(word)
-                ed = st+8 if st+8<len(question) else len(question)
-                re_sub_piece = question[st:ed]
-                re_list.append(re_sub_piece)
-                header1,header2 = num_column(word,question,headers)
-                header1_list.append(header1)
-                header2_list.append(header2)
-                if question[question.index(word) - 1] == '都' or question[question.index(word) - 2:question.index(word)] == '都是' or question[question.index(word) - 2:question.index(word)] == '都会':
-                    re_list.append(re_sub_piece)
-                if word in question[st:]:
-                    a,b,c = get_piece(word,question[st:],headers)
-                    if len(a)>0:
-                        re_list.append(a[0]) 
-                        header1,header2 = num_column(word,question[st:],headers)
-                        header1_list.append(header1)
-                        header2_list.append(header2)
+            if word in question[st:]:
+                a,b,c = get_piece(word,question[st:],headers)
+                if len(a)>0:
+                    re_list.append(a[0]) 
+                    header1,header2 = num_column(word,question[st:],headers)
+                    header1_list.append(header1)
+                    header2_list.append(header2)
                     
     return re_list,header1_list,header2_list
 
@@ -399,18 +358,10 @@ def re_val():
     less_list = ['少于','小于','低于','不足','不高于','不超过','不大于','未达到','没有达到','没有超过','没破','不到']
     less_spe_list = ['以下']
     f = 'data/val/val.json'
-    bb_more_list = []
-    bb_less_list = []
-    bb_more_spe_list = []
-    bb_less_spe_list = []
-    hhh_more_list1 = []
-    hhh_less_list1= []
-    hhh_more_spe_list1 = []
-    hhh_less_spe_list1 = []
-    hhh_more_list2 = []
-    hhh_less_list2 = []
-    hhh_more_spe_list2 = []
-    hhh_less_spe_list2 = []
+    bb_more_list ,bb_less_list ,bb_more_spe_list ,bb_less_spe_list = [],[],[],[]
+    hhh_more_list1 ,hhh_less_list1 ,hhh_more_spe_list1 ,hhh_less_spe_list1 = [],[],[],[]
+    hhh_more_list2 ,hhh_less_list2 ,hhh_more_spe_list2 ,hhh_less_spe_list2 = [],[],[],[]
+    
     with open(f, encoding='utf-8') as inf:        
         for idx, line in enumerate(inf):
             print(idx)
@@ -418,20 +369,10 @@ def re_val():
             question = sql['question']
             table_id = sql['table_id']
             headers = get_headers(table_id)
-            re_more_list = []
-            re_less_list = []
-            re_more_spe_list = []
-            re_less_spe_list = []
-            hd_more_list1 = []
-            hd_less_list1 = []
-            hd_more_spe_list1 = []
-            hd_less_spe_list1 = []
-            hd_more_list2 = []
-            hd_less_list2 = []
-            hd_more_spe_list2 = []
-            hd_less_spe_list2 = []
-            
-                
+            re_more_list ,re_less_list ,re_more_spe_list ,re_less_spe_list = [],[],[],[]
+            hd_more_list1 ,hd_less_list1 ,hd_more_spe_list1 ,hd_less_spe_list1 = [],[],[],[]
+            hd_more_list2 ,hd_less_list2 ,hd_more_spe_list2 ,hd_less_spe_list2 = [],[],[],[]
+               
             for word in more_list:
                 re_sub_list,hd_sub_list1,hd_sub_list2 = get_piece(word,question,headers)
                 if re_sub_list:
@@ -500,10 +441,9 @@ def re_val():
             hhh_more_spe_list2.append(hd_more_spe_list2)
             hhh_less_spe_list2.append(hd_less_spe_list2)
             
-            
-    
     inf.close()
-    return bb_more_list,bb_less_list,bb_more_spe_list,bb_less_spe_list,hhh_more_list1, hhh_less_list1,hhh_more_spe_list1,hhh_less_spe_list1,hhh_more_list2, hhh_less_list2,hhh_more_spe_list2,hhh_less_spe_list2
+    re_list = [bb_more_list,bb_less_list,bb_more_spe_list,bb_less_spe_list,hhh_more_list1, hhh_less_list1,hhh_more_spe_list1,hhh_less_spe_list1,hhh_more_list2, hhh_less_list2,hhh_more_spe_list2,hhh_less_spe_list2]
+    return re_list
 
 def judge_special_num(c,rows,header):
     for i in range(0,len(rows)):
@@ -524,7 +464,7 @@ def get_special_num(question,rows,headers):
     a_list.extend(less_list)
     a_list.extend(less_spe_list)
     for sub in a_list:
-        if sub in question:
+#        if sub in question:
             return rank_str,header
     c = jieba.lcut(question)
     while '-' in c:
@@ -584,21 +524,7 @@ def no_name(question,origin_rows,headers):
             question = re.sub(common_str,'',question)
             
     rank3_str,_,header3,_ = match_chinese_value(rows,question)
-    '''
-    if rank2_str == rank1_str:
-        rank2_str = rank3_str
-        header2 = header3
-    else:
-        common_str,_ = find_lcseque(rank1_str,rank2_str)
-        if common_str == rank2_str:
-            rank2_str = rank3_str
-            header2 = header3
-        if common_str == rank1_str:
-            rank1_str = rank2_str
-            header1 = header2
-            rank2_str = rank3_str
-            header2 = header3
-    '''
+
     if rank2_str == rank1_str:
         rank2_str = rank3_str
         header2 = header3            
@@ -634,16 +560,17 @@ def column_match(question,table_id):
 def where_column():
     f = 'data/val/val.json'
     out_dict = {}
-    fw = open('data/lalala_val.json','r+',encoding='utf-8')
-    bb_more_list,bb_less_list,bb_more_spe_list,bb_less_spe_list,hhh_more_list1, hhh_less_list1,hhh_more_spe_list1,hhh_less_spe_list1,hhh_more_list2, hhh_less_list2,hhh_more_spe_list2,hhh_less_spe_list2 = re_val()
+    out_dict_list = []
+    re_list = re_val
+    [bb_more_list,bb_less_list,bb_more_spe_list,bb_less_spe_list] = [re_list[i] for i in range(0,4)]
+    [hhh_more_list1, hhh_less_list1,hhh_more_spe_list1,hhh_less_spe_list1] = [re_list[i] for i in range(4,8)]
+    [hhh_more_list2, hhh_less_list2,hhh_more_spe_list2,hhh_less_spe_list2] = [re_list[i] for i in range(8,12)]
     with open(f, encoding='utf-8') as inf:
         for idx, line in enumerate(inf):
             print(idx)
             sql = json.loads(line.strip())
             table_id = sql['table_id']
             question = sql['question']
-            ##############################
-            #conds = sql['sql']['conds']
             columns,header = column_match(question,table_id)
             out_dict['column'] = columns
             out_dict['header'] = header
@@ -651,14 +578,9 @@ def where_column():
             out_dict['num_column'] = [hhh_more_list1[idx], hhh_less_list1[idx],hhh_more_spe_list1[idx],hhh_less_spe_list1[idx]]
             out_dict['num_column_waiting'] = [hhh_more_list2[idx], hhh_less_list2[idx],hhh_more_spe_list2[idx],hhh_less_spe_list2[idx]]
             out_dict['conds'] = get_input_dict(idx)['conds']
-            #out_dict['conds'] = conds
-            a = json.dumps(out_dict, ensure_ascii=False)+'\n'
-            fw.write(a)
-    fw.close()
+            out_dict_list.append(out_dict)
     inf.close()
-    
-#where_column()
-#print(is_number('978-7-03-053742-3'))
+    return out_dict_list
 
 def get_input_dict(i):
     f = 'data/best_val.json'
@@ -669,131 +591,109 @@ def get_input_dict(i):
                 inf.close()
                 return sql
 
-def final_step():
-    f = 'data/lalala_val.json'
+def final_step(out_dict_list):
     fw = open('data/pre_val.json','r+',encoding='utf-8')
-    with open(f, encoding='utf-8') as inf:
-        for idx, line in enumerate(inf):
-            print(idx)
-            sql = json.loads(line.strip())   
-            column = sql['column']
-            header = sql['header']
-            number = sql['number']
-            input_dict = get_input_dict(idx)  ###############包含最好的select部分和where_num部分
-            conds = input_dict['conds']
-            sel = input_dict['sel']
-            num_column = sql['num_column']
-            num_column_waiting = sql['num_column_waiting']   ############候选，当和sel选择的列冲突时启用该列表
+    for idx, line in enumerate(out_dict_list):
+        print(idx)
+        sql = line.strip()  
+        column = sql['column']
+        header = sql['header']
+        number = sql['number']
+        input_dict = get_input_dict(idx)  ###############包含最好的select部分和where_num部分
+        conds = input_dict['conds']
+        sel = input_dict['sel']
+        num_column = sql['num_column']
+        num_column_waiting = sql['num_column_waiting']   ############候选，当和sel选择的列冲突时启用该列表
 
-            new_conds = []
-            tem_conds = []
-            cond_num = 0   #已经写入了几个cond
-            for i in range(0,4):
-                if len(number[i])>0:
-                    for j ,sub_num in enumerate(number[i]):
-                        sub_cond = []
-                        if i == 0 or i == 2:
-                            cond_op = 0
+        new_conds = []
+        tem_conds = []
+        cond_num = 0   #已经写入了几个cond
+        for i in range(0,4):
+            if len(number[i])>0:
+                for j ,sub_num in enumerate(number[i]):
+                    sub_cond = []
+                    if i == 0 or i == 2:
+                        cond_op = 0
+                    else:
+                        cond_op = 1
+                    if len(num_column[i]) >j:   #############应对 都 这种情况，预测出来的num_column的数目要多于number
+                        if num_column[i][j] not in sel and num_column[i][j] not in tem_conds:
+                            sub_cond.append(num_column[i][j])
                         else:
-                            cond_op = 1
-                        if len(num_column[i]) >j:   #############应对 都 这种情况，预测出来的num_column的数目要多于number
-                            if num_column[i][j] not in sel and num_column[i][j] not in tem_conds:
-                                sub_cond.append(num_column[i][j])
-                            else:
-                                sub_cond.append(num_column_waiting[i][j])
+                            sub_cond.append(num_column_waiting[i][j])
+                    else:
+                        if num_column[i][j-1] not in sel and num_column[i][j-1] not in tem_conds:
+                            sub_cond.append(num_column[i][j-1])
                         else:
-                            if num_column[i][j-1] not in sel and num_column[i][j-1] not in tem_conds:
-                                sub_cond.append(num_column[i][j-1])
-                            else:
-                                sub_cond.append(num_column_waiting[i][j-1])
-                        tem_conds.extend(sub_cond)
-                        sub_cond.append(cond_op)
-                        sub_cond.append(sub_num)
-                        new_conds.append(sub_cond)
-                        cond_num += 1
-                        if cond_num >= len(conds):
-                            break
-                        
+                            sub_cond.append(num_column_waiting[i][j-1])
+                    tem_conds.extend(sub_cond)
+                    sub_cond.append(cond_op)
+                    sub_cond.append(sub_num)
+                    new_conds.append(sub_cond)
+                    cond_num += 1
                     if cond_num >= len(conds):
                         break
-            avi_len = len(conds) - cond_num
-            j = 0
-            for k in range(0,avi_len):
-                sub_cond = []
-                if j < len(header) and header[j] not in sel:
-                    sub_cond.append(header[j])
-                    sub_cond.append(2)
-                    sub_cond.append(column[j])
-                    new_conds.append(sub_cond)
-                    j = j+1
-                else:
-                    if j+1 < len(header):
-                        sub_cond.append(header[j+1])
-                        sub_cond.append(2)
-                        sub_cond.append(column[j+1])
-                        new_conds.append(sub_cond)
-
-                    j = j + 2
-                if j >= avi_len:
-                    break
-            
-            ##############################  去除00000000000000
-            real_new_conds = []
-            if len(new_conds) > 1:
-                for i,sub_cond in enumerate(new_conds):
-                    if '000000000000' in sub_cond:
-                        real_new_conds = conds
-                        break
-                        #real_new_conds.append(sub_cond)
-                    else:
-                        real_new_conds.append(sub_cond)
-            elif len(new_conds) == 1:
-                if '000000000000' in new_conds[0] :
-                    real_new_conds = conds
-                else:
-                    real_new_conds = new_conds
-            else:
-                real_new_conds = conds
                     
-            input_dict['conds'] = real_new_conds
-            
-            if len(real_new_conds) > 1 and real_new_conds[0][2]==real_new_conds[1][2] and is_number(real_new_conds[0][2]) == False:                
-                input_dict['conds'] = [real_new_conds[0]]
-                print(conds)
-            
-            if len(real_new_conds) == 2 and real_new_conds[0]==real_new_conds[1]:
-                input_dict['conds'] = conds
-            if len(real_new_conds) == 1:
-                input_dict['cond_conn_op'] = 0
-            if len(real_new_conds) >1 and input_dict['cond_conn_op'] == 0:
-                input_dict['cond_conn_op'] = 1
-            if len(real_new_conds) == 2 and real_new_conds[0][0]==real_new_conds[1][0] :
-                input_dict['cond_conn_op'] = 2
-            
-            a = json.dumps(input_dict, ensure_ascii=False)+'\n'
-            fw.write(a)
+                if cond_num >= len(conds):
+                    break
+        avi_len = len(conds) - cond_num
+        j = 0
+        for k in range(0,avi_len):
+            sub_cond = []
+            if j < len(header) and header[j] not in sel:
+                sub_cond.append(header[j])
+                sub_cond.append(2)
+                sub_cond.append(column[j])
+                new_conds.append(sub_cond)
+                j = j+1
+            else:
+                if j+1 < len(header):
+                    sub_cond.append(header[j+1])
+                    sub_cond.append(2)
+                    sub_cond.append(column[j+1])
+                    new_conds.append(sub_cond)
 
-
-
-if __name__ == '__main__':              
-    where_column()
-    final_step()    
-
-
+                j = j + 2
+            if j >= avi_len:
+                break
+        
+        ##############################  去除00000000000000
+        real_new_conds = []
+        if len(new_conds) > 1:
+            for i,sub_cond in enumerate(new_conds):
+                if '000000000000' in sub_cond:
+                    real_new_conds = conds
+                    break
+                    #real_new_conds.append(sub_cond)
+                else:
+                    real_new_conds.append(sub_cond)
+        elif len(new_conds) == 1:
+            if '000000000000' in new_conds[0] :
+                real_new_conds = conds
+            else:
+                real_new_conds = new_conds
+        else:
+            real_new_conds = conds
                 
+        input_dict['conds'] = real_new_conds
+        
+        if len(real_new_conds) > 1 and real_new_conds[0][2]==real_new_conds[1][2] and is_number(real_new_conds[0][2]) == False:                
+            input_dict['conds'] = [real_new_conds[0]]
+            print(conds)
+        
+        if len(real_new_conds) == 2 and real_new_conds[0]==real_new_conds[1]:
+            input_dict['conds'] = conds
+        if len(real_new_conds) == 1:
+            input_dict['cond_conn_op'] = 0
+        if len(real_new_conds) >1 and input_dict['cond_conn_op'] == 0:
+            input_dict['cond_conn_op'] = 1
+        if len(real_new_conds) == 2 and real_new_conds[0][0]==real_new_conds[1][0] :
+            input_dict['cond_conn_op'] = 2
+        
+        a = json.dumps(input_dict, ensure_ascii=False)+'\n'
+        fw.write(a)
 
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+if __name__ == '__main__':             
+    out_dict_list = where_column()
+    final_step(out_dict_list)   
     
