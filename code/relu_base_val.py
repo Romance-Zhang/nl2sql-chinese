@@ -20,7 +20,6 @@ def get_date(question):
             question = re.sub(a[0],tem,question)
     ###顺便替换‘两’
     question = re.sub('两','二',question)
-            
     return question
             
 def is_number(s):
@@ -252,7 +251,7 @@ def num_column(word,question,headers):
     return header1,header2
 
 def get_headers(table_id):
-    f = 'data/val/val.tables.json'   
+    f = '../data/val/val.tables.json'   
     with open(f, encoding='utf-8') as inf:
         for idx, line in enumerate(inf):
             sql = json.loads(line.strip())
@@ -276,8 +275,7 @@ def get_number(re_list):
                         cut = '-'+cut 
                 if cut not in ['万','千','百','亿']:
                     new_list.append(cut)
-                    break
- 
+                    break 
     return new_list
 
 def get_number_spe(re_list):
@@ -295,8 +293,7 @@ def get_number_spe(re_list):
                         cut = '-'+cut
                 if cut not in ['万','千','百','亿']:
                     new_list.append(cut)
-                    break
-            
+                    break            
     return new_list
 
 def get_piece(word,question,headers):
@@ -348,16 +345,12 @@ def get_spe_piece(word,question,headers):
         
     return re_list,header1_list,header2_list
 
-
-#word = '以下'
-#print(get_spe_piece(word,question))
-
 def re_val():
     more_list = ['多于','大于','高于','超过','超出','突破','不低于','不小于','占比过','达到','超','破']
     more_spe_list = ['以上']
     less_list = ['少于','小于','低于','不足','不高于','不超过','不大于','未达到','没有达到','没有超过','没破','不到']
     less_spe_list = ['以下']
-    f = 'data/val/val.json'
+    f = '../data/val/val.json'
     bb_more_list ,bb_less_list ,bb_more_spe_list ,bb_less_spe_list = [],[],[],[]
     hhh_more_list1 ,hhh_less_list1 ,hhh_more_spe_list1 ,hhh_less_spe_list1 = [],[],[],[]
     hhh_more_list2 ,hhh_less_list2 ,hhh_more_spe_list2 ,hhh_less_spe_list2 = [],[],[],[]
@@ -485,9 +478,8 @@ def get_special_num(question,rows,headers):
                 if rank_str:
                    return rank_str,header
     return rank_str,header      
-    
-    
-def no_name(question,origin_rows,headers):
+        
+def column_exact_match(question,origin_rows,headers):
     rows = copy.deepcopy(origin_rows)
     question = get_date(question)
     for i ,row in enumerate(rows):
@@ -528,8 +520,7 @@ def no_name(question,origin_rows,headers):
     if rank2_str == rank1_str:
         rank2_str = rank3_str
         header2 = header3            
-    
-    
+       
     rank_str,header = get_special_num(question,origin_rows,headers)
     if rank_str:
         rank3_str = rank_str
@@ -544,24 +535,33 @@ def no_name(question,origin_rows,headers):
     
     return rank_list,header_list
 
-
 def column_match(question,table_id):
-    f = 'data/val/val.tables.json'
+    f = '../data/val/val.tables.json'
     with open(f, encoding='utf-8') as inf:
         for idx, line in enumerate(inf):
             sql = json.loads(line.strip())
             rows = sql['rows']
             headers = sql['header']
             if table_id == sql['id']:
-                columns,header = no_name(question,rows,headers)
+                columns,header = column_exact_match(question,rows,headers)
                 inf.close()
                 return columns,header
 
-def where_column():
-    f = 'data/val/val.json'
+def get_input_dict(i):
+    f = '../data/best_val.json'
+    inf = open(f,encoding='utf-8')
+    sql = json.loads(inf.readlines()[i])
+    inf.close()
+    return sql
+
+
+def first_step():
+    f = '../data/val/val.json'
     out_dict = {}
     out_dict_list = []
-    re_list = re_val
+    ############1.用于预测where_column和where_value部分，并根据where_value反推header
+    ############2.基于汉字的columns提供三个候选，基于数字的column提供三个候选，并且再提供三个候补，用于特殊情况的备选
+    re_list = re_val()
     [bb_more_list,bb_less_list,bb_more_spe_list,bb_less_spe_list] = [re_list[i] for i in range(0,4)]
     [hhh_more_list1, hhh_less_list1,hhh_more_spe_list1,hhh_less_spe_list1] = [re_list[i] for i in range(4,8)]
     [hhh_more_list2, hhh_less_list2,hhh_more_spe_list2,hhh_less_spe_list2] = [re_list[i] for i in range(8,12)]
@@ -582,19 +582,11 @@ def where_column():
     inf.close()
     return out_dict_list
 
-def get_input_dict(i):
-    f = 'data/best_val.json'
-    with open(f, encoding='utf-8') as inf:
-        for idx, line in enumerate(inf):
-            if idx == i:
-                sql = json.loads(line.strip()) 
-                inf.close()
-                return sql
-
-def final_step(out_dict_list):
-    fw = open('data/pre_val.json','r+',encoding='utf-8')
+def second_step(out_dict_list):
+    fw = open('../data/pre_val.json','r+',encoding='utf-8')
     for idx, line in enumerate(out_dict_list):
         print(idx)
+        ##############################1.首先拿到最好的sel部分和where_num部分进行组合
         sql = line.strip()  
         column = sql['column']
         header = sql['header']
@@ -604,7 +596,7 @@ def final_step(out_dict_list):
         sel = input_dict['sel']
         num_column = sql['num_column']
         num_column_waiting = sql['num_column_waiting']   ############候选，当和sel选择的列冲突时启用该列表
-
+        ########################2.根据where_num确定first_step中到底要取几个值，组合成完整的结构化的mysql语句
         new_conds = []
         tem_conds = []
         cond_num = 0   #已经写入了几个cond
@@ -656,8 +648,8 @@ def final_step(out_dict_list):
                 j = j + 2
             if j >= avi_len:
                 break
-        
-        ##############################  去除00000000000000
+        ############3.根据MySQL语句本身的规则做一些assertion提高准确率
+        ###  去除00000000000000
         real_new_conds = []
         if len(new_conds) > 1:
             for i,sub_cond in enumerate(new_conds):
@@ -676,7 +668,7 @@ def final_step(out_dict_list):
             real_new_conds = conds
                 
         input_dict['conds'] = real_new_conds
-        
+        ####################特殊规则
         if len(real_new_conds) > 1 and real_new_conds[0][2]==real_new_conds[1][2] and is_number(real_new_conds[0][2]) == False:                
             input_dict['conds'] = [real_new_conds[0]]
             print(conds)
@@ -694,6 +686,11 @@ def final_step(out_dict_list):
         fw.write(a)
 
 if __name__ == '__main__':             
-    out_dict_list = where_column()
-    final_step(out_dict_list)   
+    ############1.用于预测where_column和where_value部分，并根据where_value反推header
+    ############2.基于汉字的columns提供三个候选，基于数字的column提供三个候选，并且再提供三个候补，用于特殊情况的备选
+    out_dict_list = first_step()
+    ############1.首先拿到最好的sel部分和where_num部分进行组合
+    ############2.根据where_num确定first_step中到底要取几个值，组合成完整的结构化的mysql语句
+    ############3.根据MySQL语句本身的规则做一些assertion提高准确率
+    second_step(out_dict_list)   
     
